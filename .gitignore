@@ -207,3 +207,4 @@ marimo/_lsp/
 __marimo__/
 
 jx_files
+sample_generated_negative.jsonl
