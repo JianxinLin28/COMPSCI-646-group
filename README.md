@@ -21,7 +21,7 @@ python supplement_negative_passage.py --input_file data/sample.jsonl
 You should see a newly generated file called `sample_generated_negative.jsonl`. That contains a new column `neg`, which is the negative sample.
 
 ## 📖Guide 2: generate negative samples using LLM 
-⚠️ I strongly recommend you to install everything in a dedicated python environment.
+⚠️ I strongly recommend you to install everything in a dedicated python environment. (>= python 3.10)
 
 This is the newer guide that teaches you how to generate better negative samples using LLM.
 * Step 1: create a new file '.env' under `synthetic_data_generation` folder. Enter
