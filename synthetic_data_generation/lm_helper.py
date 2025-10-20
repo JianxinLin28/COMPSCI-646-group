@@ -1,5 +1,6 @@
 import os
 import random
+from dotenv import load_dotenv
 from MyUtil.my_logger import MyLogger
 
 my_logger = MyLogger()
@@ -8,8 +9,7 @@ class OpenAILM():
     def __init__(self, model_id, temperature=1, top_p=1, seed=None, base_url=None, api_key=None) -> None:
         from openai import OpenAI
         if api_key is None:
-            # OPENAI_KEY = os.environ["OPENAI_API_KEY"]
-            OPENAI_KEY = "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"
+            OPENAI_KEY = os.getenv("OPENAI_API_KEY")
         else:
             OPENAI_KEY = api_key
         self.client = OpenAI(api_key=OPENAI_KEY, base_url=base_url)

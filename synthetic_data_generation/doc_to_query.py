@@ -57,7 +57,10 @@ def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num
             my_logger.error(f"Skipping query: {query}")
             return None
         items = []
+
+        my_logger.info("Start making items")
         for _query in queries:
+            my_logger.info(f"Query: {query}")
             pos = document
             try:
                 if isinstance(_query, dict):
@@ -76,6 +79,7 @@ def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num
                 'pos': [pos],
                 'neg': negs,
             }
+            my_logger.info(f"Generated item: {item}", 1)
             items.append(item)
         return items
 

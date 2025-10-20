@@ -16,7 +16,7 @@ tasks=(
 )
 
 
-MODEL=gpt-4o-mini
+MODEL=gpt-4o
 queries_per_doc=1
 num_docs=1
 prompt_id="hq_gen"
