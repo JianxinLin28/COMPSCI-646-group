@@ -62,6 +62,8 @@ This command generates three tuples of (hard query, positive document, negative 
 
 ## 📗Generate the rewritten queries with reasoning given the queries
 
+🤷‍♂️ *(We don't need this)*
+
 Command template:
 ```
 python -m generate_reasoning --model_id $MODEL --num_docs $num_docs --subject $TASK --base_dir $output_dir --prompt_id $prompt_id
@@ -69,6 +71,7 @@ python -m generate_reasoning --model_id $MODEL --num_docs $num_docs --subject $T
 
 ## 📘Batched version
 
+🤷‍♂️ *(May save a few dollars on GPT-4o, unnecessary)*
 ```
 python -m doc_to_query_batch --model_id $MODEL --queries_per_doc $queries_per_doc --num_docs $num_docs --subject $TASK --output_dir $output_dir --filter fineweb --prompt_id $prompt_id
 ```
