@@ -1,8 +1,8 @@
-from datasets import load_dataset
-from pyserini import analysis
-from gensim.corpora import Dictionary
-from gensim.models import LuceneBM25Model
-from gensim.similarities import SparseMatrixSimilarity
+from datasets import load_dataset # type: ignore
+from pyserini import analysis # type: ignore
+from gensim.corpora import Dictionary # type: ignore
+from gensim.models import LuceneBM25Model # type: ignore
+from gensim.similarities import SparseMatrixSimilarity # type: ignore
 from MyUtil.my_logger import MyLogger
 import pdb
 import json

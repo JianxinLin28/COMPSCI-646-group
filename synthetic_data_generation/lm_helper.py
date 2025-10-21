@@ -9,6 +9,7 @@ class OpenAILM():
     def __init__(self, model_id, temperature=1, top_p=1, seed=None, base_url=None, api_key=None) -> None:
         from openai import OpenAI
         if api_key is None:
+            load_dotenv()
             OPENAI_KEY = os.getenv("OPENAI_API_KEY")
         else:
             OPENAI_KEY = api_key

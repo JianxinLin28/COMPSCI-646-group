@@ -4,7 +4,7 @@ import re
 import json
 import argparse
 from tqdm import tqdm
-import torch.distributed as dist
+import torch.distributed as dist # type: ignore
 from lm_helper import HFLM, OpenAILM
 from MyUtil.my_logger import MyLogger
 

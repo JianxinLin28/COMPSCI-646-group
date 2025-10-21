@@ -1,4 +1,4 @@
-from datasets import load_dataset
+from datasets import load_dataset # type: ignore
 import os
 import json
 import re
@@ -319,7 +319,7 @@ def retrieve_gold_docs(subject, cache_dir='cache'):
     return results
 
 
-import tiktoken
+import tiktoken # type: ignore
 def count_tokens(messages, model_name="gpt-4o"):
     enc = tiktoken.encoding_for_model(model_name)
     n_tokens = 0

@@ -208,3 +208,6 @@ __marimo__/
 
 jx_files
 sample_generated_negative.jsonl
+*/outputs
+synthetic_data_generation/data
+*/cache

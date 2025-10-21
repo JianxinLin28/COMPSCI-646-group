@@ -181,7 +181,10 @@ def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num
                         num_attempt += 1
                         if items is not None:
                             succeed = True
-                        my_logger.debug(f"Not success, remaining attempts: {max_num_attempt_per_doc-num_attempt}")
+                        if not succeed:
+                            my_logger.debug(f"Not success, remaining attempts: {max_num_attempt_per_doc-num_attempt}")
+                        else:
+                            my_logger.debug(f"Success, prepare to write result.")
                 else:
                     my_logger.info(f"Using existing query. Skipping.", 1)
                     my_logger.info()
