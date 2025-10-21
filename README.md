@@ -87,7 +87,7 @@ Command template:
 python -m generate_reasoning --model_id $MODEL --num_docs $num_docs --subject $TASK --base_dir $output_dir --prompt_id $prompt_id
 ```
 
-## 📘Batch version
+## 📘Batched version
 
 ```
 python -m doc_to_query_batch --model_id $MODEL --queries_per_doc $queries_per_doc --num_docs $num_docs --subject $TASK --output_dir $output_dir --filter fineweb --prompt_id $prompt_id
