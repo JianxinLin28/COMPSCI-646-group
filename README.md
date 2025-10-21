@@ -1,27 +1,7 @@
 # COMPSCI-646-group
 A Study of Hard Negative Samples on Reasoning-aware Retrieval Models
 
-⚠️ **You should study Guide 2 before study Guide 1.** This is because Guide 2 generates hard negative queries and mines positive documents which will be used to generate hard negative documents in Guide 1.
-
-## 📖Guide 1: generate negative samples using LLM
-
-This guide will teach you how to generate negative samples using LLM.
-* Step 1: create a new file '.env' under `negative_sample` folder. Enter
-```
-OPENAI_API_KEY = [The key]
-```
-Replace [The key] with an openai api key. You can use the one provided by Jianming. It's under our Notion page -> Misc. 
-* Step 2: from `negative_sample`, run
-```
-pip install -r requirements.txt
-```
-* Step 3: from `negative_sample`, run
-```
-python supplement_negative_passage.py --input_file data/sample.jsonl
-```
-You should see a newly generated file called `sample_generated_negative.jsonl`. That contains a new column `neg`, which is the negative sample.
-
-## 📖Guide 2: generate negative samples using LLM 
+## 📖Guide 1: generate negative samples using LLM 
 ⚠️ I strongly recommend you to install everything in a dedicated python environment. (>= python 3.10)
 
 This is the newer guide that teaches you how to generate better negative samples using LLM.
@@ -104,3 +84,21 @@ python -m generate_reasoning_batch --model_id $MODEL --num_docs $num_docs --subj
 ```
 python -m generate_reasoning_batch --model_id $MODEL --num_docs $num_docs --subject $TASK --base_dir $output_dir --prompt_id $prompt_id --gather_results
 ```
+
+## 📖Guide 2: generate negative samples using LLM
+
+This guide will teach you how to generate negative samples using LLM.
+* Step 1: create a new file '.env' under `negative_sample` folder. Enter
+```
+OPENAI_API_KEY = [The key]
+```
+Replace [The key] with an openai api key. You can use the one provided by Jianming. It's under our Notion page -> Misc. 
+* Step 2: from `negative_sample`, run
+```
+pip install -r requirements.txt
+```
+* Step 3: from `negative_sample`, run
+```
+python supplement_negative_passage.py --input_file data/sample.jsonl
+```
+You should see a newly generated file called `sample_generated_negative.jsonl`. That contains a new column `neg`, which is the negative sample.
