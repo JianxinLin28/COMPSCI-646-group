@@ -31,7 +31,7 @@ class BM25_Miner():
         bm25_corpus = self.model[list(map(self.dictionary.doc2bow, corpus))]
         self.bm25_index = SparseMatrixSimilarity(bm25_corpus, num_docs=len(corpus), num_terms=len(self.dictionary),
                                                 normalize_queries=False, normalize_documents=False)
-        
+
     def search(self, query):
         query = self.analyzer.analyze(query)
         bm25_query = self.model[self.dictionary.doc2bow(query)]
@@ -68,7 +68,7 @@ class BM25_Miner():
             doc_pairs = load_dataset('xlangai/BRIGHT', 'long_documents', cache_dir=cache_dir)[task]
         else:
             doc_pairs = load_dataset('xlangai/BRIGHT', 'documents', cache_dir=cache_dir)[task]
-        
+
         doc_ids = []
         documents = []
         for dp in doc_pairs:
@@ -81,8 +81,7 @@ class BM25_Miner():
         for docid, doc in zip(doc_ids, documents):
             hashed_documents[docid] = doc
         return hashed_documents
-        
-    
+
     def get_documents_text(self, docids):
         return [self.hashed_documents[docid] for docid in docids]
 
@@ -100,6 +99,6 @@ class BM25_Miner():
                     num_added += 1
             if num_added == num_neg:
                 break
-        
+
         hard_negative_documents = self.get_documents_text(hard_negatives_ids)
         return hard_negative_documents

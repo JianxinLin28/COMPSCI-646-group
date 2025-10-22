@@ -3,127 +3,102 @@ import json
 import random
 import argparse
 from tqdm import tqdm
-import pdb
-from collections import defaultdict
-import numpy as np
 
-from hard_negative_mining import BM25_Miner
+from bm25_miner import BM25_Miner
+from get_dataset import get_first_100_medical_sciences
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../synthetic_data_generation/')))
+# from hard_negative_mining import BM25_Miner
 from data_gen_prompts import *
 from gen_utils import *
-from data_gen_prompts import *
 from lm_helper import OpenAILM, HFLM
-from MyUtil.my_logger import MyLogger
-import re
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../MyUtil')))
+import my_logger # type: ignore
 
 my_logger = MyLogger()
+
+def hash_existed_documents(path):
+    if not os.path.exists(path):
+        return {}
+    data = load_jsonl(path)
+    hashed_data = {}
+    for ex in data:
+        query, document = ex['query'], ex['document']
+        key = document
+        if 'prompt' in ex:
+            key += ex['prompt']
+        hashed_data[key] = query
+    return hashed_data
+
+def check_sample_existence(document, hashed_data, prompt=None):
+    key = document
+    if prompt:
+        key += prompt
+    if key in hashed_data:
+        return True, hashed_data[key]
+    else:
+        return False, None
+
+def format_example(query, document, queries_per_doc):
+    decoder = json.JSONDecoder()
+    try:
+        json_data, _ = decoder.raw_decode(query[query.find('{'):])
+        if 'hard_query' in json_data:
+            queries = json_data['hard_query']
+        else:
+            queries = json_data['questions']
+        if len(queries) > queries_per_doc:
+            queries = queries[:queries_per_doc]
+    except Exception as e:
+        my_logger.error(e)
+        my_logger.error(f"Skipping query: {query}")
+        return None
+    items = []
+
+    my_logger.info("Start making items")
+    for _query in queries:
+        my_logger.info(f"Query: {query}")
+        pos = document
+        try:
+            if isinstance(_query, dict):
+                _question = _query['question']
+                _scenario = _query['scenario']
+                _question = f"{_scenario} {_question}"
+            else:
+                _question = _query
+            negs = bm25_miner.select_hard_negatives(_question, pos, 1)
+        except Exception as e:
+            my_logger.error(e)
+            my_logger.error(f"Skipping query with type {type(_query)}: {_query}")
+            continue
+        item = {
+            'query': _question,
+            'pos': [pos],
+            'neg': negs,
+        }
+        my_logger.info(f"Generated item: {item}", 1)
+        items.append(item)
+    return items
 
 def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num_docs=100, queries_per_doc=1, filter_name=None, 
         output_dir='synthetic_data', cache_dir='cache', prompt_id='hq_gen', diverse_prompt=False, num_prompts=1, temperature=0, top_p=0):
 
-    def hash_existed_documents(path):
-        if not os.path.exists(path):
-            return {}
-        data = load_jsonl(path)
-        hashed_data = {}
-        for ex in data:
-            query, document = ex['query'], ex['document']
-            key = document
-            if 'prompt' in ex:
-                key += ex['prompt']
-            hashed_data[key] = query
-        return hashed_data
-            
-    def check_sample_existence(document, hashed_data, prompt=None):
-        key = document
-        if prompt:
-            key += prompt
-        if key in hashed_data:
-            return True, hashed_data[key]
-        else:
-            return False, None
-        
-    def format_example(query, document):
-        decoder = json.JSONDecoder()
-        try:
-            json_data, _ = decoder.raw_decode(query[query.find('{'):])
-            if 'hard_query' in json_data:
-                queries = json_data['hard_query']
-            else:
-                queries = json_data['questions']
-            if len(queries) > queries_per_doc:
-                queries = queries[:queries_per_doc]
-        except Exception as e:
-            my_logger.error(e)
-            my_logger.error(f"Skipping query: {query}")
-            return None
-        items = []
-
-        my_logger.info("Start making items")
-        for _query in queries:
-            my_logger.info(f"Query: {query}")
-            pos = document
-            try:
-                if isinstance(_query, dict):
-                    _question = _query['question']
-                    _scenario = _query['scenario']
-                    _question = f"{_scenario} {_question}"
-                else:
-                    _question = _query
-                negs = bm25_miner.select_hard_negatives(_question, pos, 1)
-            except Exception as e:
-                my_logger.error(e)
-                my_logger.error(f"Skipping query with type {type(_query)}: {_query}")
-                continue
-            item = {
-                'query': _question,
-                'pos': [pos],
-                'neg': negs,
-            }
-            my_logger.info(f"Generated item: {item}", 1)
-            items.append(item)
-        return items
-
     prompt = prompt_registry[prompt_id]
-    dataset = bm25_miner.dataset
-    subject = bm25_miner.task if bm25_miner.task else dataset
-    
-    if bm25_miner.dataset == 'BRIGHT' and bm25_miner.task:
-        examples = load_dataset('xlangai/BRIGHT', 'examples', cache_dir='cache')[subject]
-    else:
-        my_logger.info("No task specified, using all examples.")
-        tasks = [
-                'biology', 
-                'earth_science', 
-                'economics', 
-                'psychology', 
-                'robotics', 
-                'stackoverflow', 
-                'sustainable_living', 
-                'leetcode', 
-                'pony', 
-                'aops', 
-                'theoremqa_theorems', 
-                'theoremqa_questions'
-            ]
-        all_examples = load_dataset('xlangai/BRIGHT', 'examples', cache_dir='cache')
-        examples = []
-        for task in tasks:
-            examples.extend(all_examples[task])
-    
+    subject = "Medical_Sciences"
+
     documents, doc_ids = bm25_miner.documents, bm25_miner.doc_ids
     doc_dicts = [{'doc_id': doc_id, 'doc': doc} for doc_id, doc in zip(doc_ids, documents)]
-    
+
     total_num_docs = len(doc_dicts)
-    num_docs_sample_pool = min(num_docs*1, total_num_docs)  # document pool to sample num_oversample_docs docs
-    num_oversample_docs = min(num_docs*2, total_num_docs)  # obtain more documents than expected to make the final output matches the expectation
+    # num_docs_sample_pool = min(num_docs*1, total_num_docs)  # document pool to sample num_oversample_docs docs
+    # num_oversample_docs = min(num_docs*2, total_num_docs)  # obtain more documents than expected to make the final output matches the expectation
     filter_cache_dir = f'cache/{subject}'
     os.makedirs(filter_cache_dir, exist_ok=True)
     my_logger.info(f"Filtering documents based on {filter_name}...")
 
-    if dataset == 'msmarco':
-        doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
-    else:
-        doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
+    doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
     
     num_filtered_docs = len(doc_dicts)
     my_logger.info(f"Total number of documents: {total_num_docs}")
@@ -134,17 +109,17 @@ def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num
     final_output_path = os.path.join(output_dir, f'all_docs_train_data/{prompt_id}/{model_id_str}/{subject}_{num_docs}_train_data.jsonl')
     final_output_path = os.path.expanduser(final_output_path)
     os.makedirs(os.path.dirname(final_output_path), exist_ok=True)
-    
+
     output_path = os.path.join(output_dir, f'all_docs/{prompt_id}/{model_id_str}/{subject}_train_data.jsonl')
     output_path = os.path.expanduser(output_path)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     hashed_data = hash_existed_documents(output_path)
-    
+
     if 'gpt' in model_id:
         model = OpenAILM(model_id, temperature=temperature, top_p=top_p, seed=0)
     else:
         model = HFLM(model_id, temperature=temperature, top_p=top_p)
-    
+
     system_prompt = fill_sys_prompt(prompt, queries_per_doc=queries_per_doc)
     system_prompts = [system_prompt]
     
@@ -177,7 +152,7 @@ def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num
                         my_logger.info(f"Generated query: {query}", 1)
                         my_logger.info()
                         items = {'query': query, 'document': document, 'prompt': system_prompt}
-                        items = format_example(query, document)
+                        items = format_example(query, document, queries_per_doc)
                         num_attempt += 1
                         if items is not None:
                             succeed = True
@@ -205,15 +180,15 @@ def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, default=None, help='mode')
+    # parser.add_argument('--mode', type=str, default=None, help='mode')
     parser.add_argument('--model_id', type=str, default='gpt-4o', help='model id')
-    parser.add_argument('--dataset', type=str, default='bright', help='dataset')
-    parser.add_argument('--subject', type=str, default=None, help='subject')
+    # parser.add_argument('--dataset', type=str, default='bright', help='dataset')
+    # parser.add_argument('--subject', type=str, default=None, help='subject')
     parser.add_argument('--queries_per_doc', type=int, default=3, help='number of generated samples per document')
     parser.add_argument('--num_docs', type=int, default=None, help='number of documents to sample for each subject')
     parser.add_argument('--debug', action='store_true', help='debug mode')
     parser.add_argument('--filter', type=str, default=None, help='the default filter is the length filter', choices=['length', 'fineweb', 'dclm'])
-    parser.add_argument('--data_path', type=str, default='~/data/chunks/mathpile_wiki_chunks.jsonl', help='data path')
+    # parser.add_argument('--data_path', type=str, default='~/data/chunks/mathpile_wiki_chunks.jsonl', help='data path')
     parser.add_argument('--output_dir', type=str, default='data/synthetic_questions', help='base directory to save the generated data')
     parser.add_argument('--cache_dir', type=str, default='cache/', help='cache directory to save cached data during document filtering.')
     parser.add_argument('--prompt_id', type=str, default='hq_gen', help='prompt to use')
@@ -221,15 +196,16 @@ if __name__ == '__main__':
     parser.add_argument("--top_p", type=float, default=0)
     args = parser.parse_args()
     args.output_dir = os.path.expanduser(args.output_dir)
-    args.data_path = os.path.expanduser(args.data_path)
+    # args.data_path = os.path.expanduser(args.data_path)
     os.makedirs(args.cache_dir, exist_ok=True)
-    print(args)
+    # print(args)
 
-    print(f"Dataset: {args.dataset}, Task: {args.subject}")
-    bm25_miner = BM25_Miner(dataset=args.dataset, task=args.subject, data_path=args.data_path)
+    # print(f"Dataset: {args.dataset}, Task: {args.subject}")
+    # bm25_miner = BM25_Miner(dataset=args.dataset, task=args.subject, data_path=args.data_path)
+    documents, doc_ids = get_first_100_medical_sciences()
+    bm25_miner = BM25_Miner(documents, doc_ids)
 
     model_id = args.model_id
     doc2query(bm25_miner, model_id=model_id, num_docs=args.num_docs, 
         filter_name=args.filter, queries_per_doc=args.queries_per_doc, output_dir=args.output_dir, cache_dir=args.cache_dir,
         prompt_id=args.prompt_id, temperature=args.temperature, top_p=args.top_p)
-    
