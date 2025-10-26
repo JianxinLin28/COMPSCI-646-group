@@ -5,7 +5,7 @@ import argparse
 from tqdm import tqdm
 
 from bm25_miner import BM25_Miner
-from get_dataset import get_first_100_medical_sciences
+from data_reader import get_first_100_medical_sciences, save_to
 
 import sys
 import os
@@ -101,7 +101,7 @@ def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num
     doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
     
     num_filtered_docs = len(doc_dicts)
-    my_logger.info(f"Total number of documents: {total_num_docs}")
+    my_logger.info(f"Total number of documents after filtering: {total_num_docs}")
     my_logger.info(f"Number of filtered documents with oversampling: {num_filtered_docs}")
 
     model_id_str = model_id.split('/')[-1]

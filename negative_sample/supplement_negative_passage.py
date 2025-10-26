@@ -47,7 +47,7 @@ class NegativePassageGenerator:
     def __init__(self, input_file, output_file, num_workers=None, worker_id=None) -> None:
         self.num_workers = num_workers
         self.worker_id = worker_id
-        self.model = OpenAILM(model_id="gpt-4o-mini")
+        self.model = OpenAILM(model_id="gpt-4o")
         self.data = self.load_file(input_file)
         self.output_file = output_file
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -80,7 +80,7 @@ class NegativePassageGenerator:
         input_str += f"'input': {query_str}"
         input_str += f"'positive_document': {pos_str}"
         return input_str
-        
+    
     def generate_sample(self, orig_ex):
         input_str = self.prepare_input_string(orig_ex)
         sample_instruction = sample_negative_passage_prompt(input_str)
@@ -96,7 +96,7 @@ class NegativePassageGenerator:
         except:
             outputs = outputs.replace("'", '"').replace('\\"', '"').replace("\\'", "'")
             sample = json.loads(outputs)
-        print(sample)
+        # print(sample)
         return sample
     
     def generate(self,):
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     
     if args.worker_id is None or args.num_workers is None:
         output_file = args.input_file.replace('.jsonl', '_generated_negative.jsonl')
-        print(output_file)
+        # print(output_file)
     else:
         output_file = args.input_file.replace('.jsonl', f'_generated_negative_{args.worker_id}_of_{args.num_workers}.jsonl')
     
