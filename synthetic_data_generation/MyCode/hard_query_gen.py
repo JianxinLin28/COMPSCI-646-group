@@ -19,6 +19,7 @@ import my_logger # type: ignore
 
 my_logger = MyLogger()
 
+
 def hash_existed_documents(path):
     if not os.path.exists(path):
         return {}
@@ -32,6 +33,7 @@ def hash_existed_documents(path):
         hashed_data[key] = query
     return hashed_data
 
+
 def check_sample_existence(document, hashed_data, prompt=None):
     key = document
     if prompt:
@@ -40,6 +42,7 @@ def check_sample_existence(document, hashed_data, prompt=None):
         return True, hashed_data[key]
     else:
         return False, None
+
 
 def format_example(query, document, queries_per_doc):
     decoder = json.JSONDecoder()
@@ -82,12 +85,14 @@ def format_example(query, document, queries_per_doc):
         items.append(item)
     return items
 
-def doc2query(bm25_miner, model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", num_docs=100, queries_per_doc=1, filter_name=None, 
-        output_dir='synthetic_data', cache_dir='cache', prompt_id='hq_gen', diverse_prompt=False, num_prompts=1, temperature=0, top_p=0):
+
+def doc2query(bm25_miner, subject: str,
+                model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", 
+                num_docs=100, queries_per_doc=1, filter_name=None, 
+                output_dir='synthetic_data', prompt_id='hq_gen', 
+                num_prompts=1, temperature=0, top_p=0):
 
     prompt = prompt_registry[prompt_id]
-    subject = "Medical_Sciences"
-
     documents, doc_ids = bm25_miner.documents, bm25_miner.doc_ids
     doc_dicts = [{'doc_id': doc_id, 'doc': doc} for doc_id, doc in zip(doc_ids, documents)]
 
@@ -207,6 +212,7 @@ if __name__ == '__main__':
     bm25_miner = BM25_Miner(documents, doc_ids)
 
     model_id = args.model_id
-    doc2query(bm25_miner, model_id=model_id, num_docs=args.num_docs, 
-        filter_name=args.filter, queries_per_doc=args.queries_per_doc, output_dir=args.output_dir, cache_dir=args.cache_dir,
-        prompt_id=args.prompt_id, temperature=args.temperature, top_p=args.top_p)
+    doc2query(bm25_miner, subject="MedicalSciences", 
+                model_id=model_id, num_docs=args.num_docs, filter_name=args.filter, 
+                queries_per_doc=args.queries_per_doc, output_dir=args.output_dir, 
+                prompt_id=args.prompt_id, temperature=args.temperature, top_p=args.top_p)
