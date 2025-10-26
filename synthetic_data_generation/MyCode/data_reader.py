@@ -43,91 +43,45 @@ class DataReader:
             return []
 
 
-def read_first_100_medical_sciences():
-    df = pd.read_json("hf://datasets/R2MED/Medical-Sciences/corpus.jsonl", lines=True)
+class MedicalSciencesDataReader:
+    def __init__(self):
+        self.hf_path = "hf://datasets/R2MED/Medical-Sciences/corpus.jsonl"
+        self.name = "MedicalSciences"
+        self.save_dir = os.path.join(save_path, self.name)
+        self.hf_manager: HFDatasetManager = None
+        self.data_reader: DataReader = None
+        self._load()
 
-    subset = df["text"].head(100)
+    def _load(self):
+        if os.path.exists(self.save_dir):
+            self._load_downloaded()
+        else:
+            self._load_new()
 
-    os.makedirs(save_path or ".", exist_ok=True)
-    text_file = os.path.join(save_path, "Medical-Sciences_text_100.txt")
-    id_file = os.path.join(save_path, "Medical-Sciences_id_100.txt")
+    def _load_new(self):
+        self.hf_manager = HFDatasetManager(self.hf_path)
+        self.hf_manager.load()
+        self.data_reader = DataReader(self.hf_manager)
+        self.data_reader.save_arrow(self.save_dir)
 
-    with open(text_file, "w", encoding="utf-8") as f:
-        for line in subset:
-            # Handle possible NaN values
-                if isinstance(line, str):
-                    f.write(line.strip() + "\n")
-                    f.write(paragraph_sep)
-                else:
-                    f.write("\n")  # blank line if value not string
-                    f.write(paragraph_sep)
+    def _load_downloaded(self):
+        self.hf_manager = HFDatasetManager(self.save_dir)
+        self.hf_manager.load()
+        self.data_reader = DataReader(self.hf_manager)
 
-    subset = df["id"].head(100)
-    with open(id_file, "w", encoding="utf-8") as f:
-        for line in subset:
-            # Handle possible NaN values
-                if isinstance(line, str):
-                    f.write(line.strip() + "\n")
-                    f.write(paragraph_sep)
-                else:
-                    f.write("\n")  # blank line if value not string
-                    f.write(paragraph_sep)
-
-def save_to(file_name: str, paragraphs: List[str]):
-    os.makedirs(save_path or ".", exist_ok=True)
-    text_file = os.path.join(save_path, file_name)
-    
-    with open(text_file, "w", encoding="utf-8") as f:
-        for p in paragraphs:
-            f.write(p.strip() + "\n")
-            f.write(paragraph_sep)
-
-def get_first_100_medical_sciences() -> Tuple[List[str], List[str]]:
-    text_file = os.path.join(save_path, "Medical-Sciences_text_100.txt")
-    id_file = os.path.join(save_path, "Medical-Sciences_id_100.txt")
-    with open(text_file, "r", encoding="utf-8") as f:
-        content = f.read()
-        paragraphs = content.split(paragraph_sep)
-        paragraphs = [paragraph.strip() for paragraph in paragraphs]
-
-    with open(id_file, "r", encoding="utf-8") as f:
-        content = f.read()
-        p_ids = content.split(paragraph_sep)
-        p_ids = [p_id.strip() for p_id in p_ids]
-    return paragraphs, p_ids
+    def get_documents(self) -> Tuple[List[str], List[str]]:
+        paragraphs = self.data_reader.column_to_list("train", "text")
+        pids = self.data_reader.column_to_list("train", "id")
+        return paragraphs, pids
 
 
+# Driver code, only for testing
 def main():
-    # get_first_100_medical_sciences()
-    # documents, doc_ids = get_first_100_medical_sciences()
-    # for document in documents:
-    #     my_logger.info(document)
-    #     my_logger.info()
-
-    def test_load_from_hf():
-        hf_manager = HFDatasetManager("hf://datasets/R2MED/Medical-Sciences/corpus.jsonl")
-        hf_manager.load()
-        data_reader = DataReader(hf_manager)
-        data_reader.save_arrow(os.path.join(save_path, "MedicalSciences"))
-
-    def test_load_local_arrow():
-        hf_manager = HFDatasetManager(os.path.join(save_path, "MedicalSciences"))
-        hf_manager.load()
-        data_reader = DataReader(hf_manager)
-        data_reader.hf_manager.info()
-
-    def sample_texts():
-        hf_manager = HFDatasetManager(os.path.join(save_path, "MedicalSciences"))
-        hf_manager.load()
-        data_reader = DataReader(hf_manager)
-        samples = data_reader.column_to_list("train", "text")[:2]
-        for sample in samples:
-            my_logger.info(sample)
-            my_logger.info()
-
-    # test_load_from_hf()
-    # test_load_local_arrow()
-    sample_texts()
+    medical_sciences_dr = MedicalSciencesDataReader()
+    paragraphs, pids = medical_sciences_dr.get_documents()
+    my_logger.info(paragraphs[0])
+    my_logger.info()
+    my_logger.info(pids[0])
 
 
 if __name__ == "__main__":

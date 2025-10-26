@@ -5,7 +5,7 @@ import argparse
 from tqdm import tqdm
 
 from bm25_miner import BM25_Miner
-from data_reader import get_first_100_medical_sciences, save_to
+from data_reader import MedicalSciencesDataReader
 
 import sys
 import os
@@ -202,7 +202,8 @@ if __name__ == '__main__':
 
     # print(f"Dataset: {args.dataset}, Task: {args.subject}")
     # bm25_miner = BM25_Miner(dataset=args.dataset, task=args.subject, data_path=args.data_path)
-    documents, doc_ids = get_first_100_medical_sciences()
+    medical_sciences_dr = MedicalSciencesDataReader()
+    documents, doc_ids = medical_sciences_dr.get_documents()
     bm25_miner = BM25_Miner(documents, doc_ids)
 
     model_id = args.model_id
