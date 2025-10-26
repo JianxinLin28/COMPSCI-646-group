@@ -1,7 +1,7 @@
 # COMPSCI-646-group
 A Study of Hard Negative Samples on Reasoning-aware Retrieval Models
 
-## 📖Guide 1: generate negative samples using LLM 
+## 📕 Setup 
 ⚠️ I strongly recommend you to install everything in a dedicated python environment. (>= python 3.10)
 
 This is the newer guide that teaches you how to generate better negative samples using LLM.
@@ -28,7 +28,7 @@ bash setup_java_winos.sh
 ```
 It's highly likely that you will be encountering errors. After solving them you should have everything installed and you can proceed to running the commands introduced below.
 
-## 📕Generate Hard Query
+## 📖Guide 1: Generate Hard Query
 
 First, make sure you cd to `synthetic_data_generation/MyCode`.
 
@@ -84,29 +84,29 @@ This command generates 6 tuples (3 for 2 docs) of (hard query, positive document
 | PMCTreatment |
 | IIYiClinical |
 
-## 📗Generate the rewritten queries with reasoning given the queries
+## 📖Guide 2: Generate Hard Negative Documents
+First, make sure you cd to `synthetic_data_generation/MyCode`.
 
-🤷‍♂️ *(We don't need this)*
+Run the following line.
 
-Command template:
 ```
-python -m generate_reasoning --model_id $MODEL --num_docs $num_docs --subject $TASK --base_dir $output_dir --prompt_id $prompt_id
+python hq_to_hard_neg_doc
 ```
 
-## 📖Guide 2: generate negative samples using LLM
+Check outputs/negative_passages folder for result.
 
-This guide will teach you how to generate negative samples using LLM.
-* Step 1: create a new file '.env' under `negative_sample` folder. Enter
+You can configure in `hq_to_hard_neg_doc.py`.
+
 ```
-OPENAI_API_KEY = [The key]
+# ================================================
+data_path = "./outputs/synthetic_questions/all_docs_train_data/hq_gen/gpt-4o"
+output_path = "./outputs/negative_passages"
+num_workers: int = None
+# ================================================
 ```
-Replace [The key] with an openai api key. You can use the one provided by Jianming. It's under our Notion page -> Misc. 
-* Step 2: from `negative_sample`, run
-```
-pip install -r requirements.txt
-```
-* Step 3: from `negative_sample`, run
-```
-python supplement_negative_passage.py --input_file data/sample.jsonl
-```
-You should see a newly generated file called `sample_generated_negative.jsonl`. That contains a new column `neg`, which is the negative sample.
+
+| variable | usage |
+| -------- | ---- |
+| data_path | the input folder containing results of hard queries |
+| output_path | where generated hard negative documents should go |
+| num_workers | not important |
