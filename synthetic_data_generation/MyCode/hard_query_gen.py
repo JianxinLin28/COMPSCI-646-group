@@ -2,10 +2,11 @@ import os
 import json
 import random
 import argparse
+from typing import List
 from tqdm import tqdm
 
 from bm25_miner import BM25_Miner
-from data_reader import MedicalSciencesDataReader
+from data_reader import MedicalSciencesDataReader, PMCTreatmentDataReader, IIYiClinicalDataReader
 
 import sys
 import os
@@ -186,6 +187,7 @@ def doc2query(bm25_miner, subject: str,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # parser.add_argument('--mode', type=str, default=None, help='mode')
+    parser.add_argument('--dataset', type=str, default='MedicalSciences', help='the dataset, see README')
     parser.add_argument('--model_id', type=str, default='gpt-4o', help='model id')
     # parser.add_argument('--dataset', type=str, default='bright', help='dataset')
     # parser.add_argument('--subject', type=str, default=None, help='subject')
@@ -194,7 +196,7 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true', help='debug mode')
     parser.add_argument('--filter', type=str, default=None, help='the default filter is the length filter', choices=['length', 'fineweb', 'dclm'])
     # parser.add_argument('--data_path', type=str, default='~/data/chunks/mathpile_wiki_chunks.jsonl', help='data path')
-    parser.add_argument('--output_dir', type=str, default='data/synthetic_questions', help='base directory to save the generated data')
+    parser.add_argument('--output_dir', type=str, default='outputs/synthetic_questions', help='base directory to save the generated data')
     parser.add_argument('--cache_dir', type=str, default='cache/', help='cache directory to save cached data during document filtering.')
     parser.add_argument('--prompt_id', type=str, default='hq_gen', help='prompt to use')
     parser.add_argument("--temperature", type=float, default=0)
@@ -205,14 +207,26 @@ if __name__ == '__main__':
     os.makedirs(args.cache_dir, exist_ok=True)
     # print(args)
 
-    # print(f"Dataset: {args.dataset}, Task: {args.subject}")
-    # bm25_miner = BM25_Miner(dataset=args.dataset, task=args.subject, data_path=args.data_path)
-    medical_sciences_dr = MedicalSciencesDataReader()
-    documents, doc_ids = medical_sciences_dr.get_documents()
+    documents: List[str] = None
+    doc_ids: List[str] = None
+
+    match args.dataset:
+        case "MedicalSciences":
+            my_logger.info(f"Loading dataset: {args.dataset}")
+            documents, doc_ids = MedicalSciencesDataReader().get_documents()
+        case "PMCTreatment":
+            my_logger.info(f"Loading dataset: {args.dataset}")
+            documents, doc_ids = PMCTreatmentDataReader().get_documents()
+        case "IIYiClinical":
+            my_logger.info(f"Loading dataset: {args.dataset}")
+            documents, doc_ids = IIYiClinicalDataReader().get_documents()
+        case _:
+            my_logger.error("Invalid dataset. Please see README for valid datasets.")
+
     bm25_miner = BM25_Miner(documents, doc_ids)
 
     model_id = args.model_id
-    doc2query(bm25_miner, subject="MedicalSciences", 
+    doc2query(bm25_miner, subject=args.dataset, 
                 model_id=model_id, num_docs=args.num_docs, filter_name=args.filter, 
                 queries_per_doc=args.queries_per_doc, output_dir=args.output_dir, 
                 prompt_id=args.prompt_id, temperature=args.temperature, top_p=args.top_p)

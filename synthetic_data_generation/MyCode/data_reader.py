@@ -1,6 +1,5 @@
 from datasets import DatasetDict # type: ignore
 from typing import List, Tuple
-import pandas as pd
 from huggingface_hub import login # type: ignore
 import sys
 import os
@@ -42,14 +41,13 @@ class DataReader:
             return []
 
 
-class MedicalSciencesDataReader:
+class BaseHFDataReader:
     def __init__(self):
-        self.hf_path = "hf://datasets/R2MED/Medical-Sciences/corpus.jsonl"
-        self.name = "MedicalSciences"
-        self.save_dir = os.path.join(save_path, self.name)
+        self.hf_path: str
+        self.name:str
+        self.save_dir: str
         self.hf_manager: HFDatasetManager = None
         self.data_reader: DataReader = None
-        self._load()
 
     def _load(self):
         if os.path.exists(self.save_dir):
@@ -74,10 +72,34 @@ class MedicalSciencesDataReader:
         return paragraphs, pids
 
 
+class MedicalSciencesDataReader(BaseHFDataReader):
+    def __init__(self):
+        self.hf_path = "hf://datasets/R2MED/Medical-Sciences/corpus.jsonl"
+        self.name = "MedicalSciences"
+        self.save_dir = os.path.join(save_path, self.name)
+        self._load()
+
+
+class PMCTreatmentDataReader(BaseHFDataReader):
+    def __init__(self):
+        self.hf_path = "hf://datasets/R2MED/PMC-Treatment/corpus.jsonl"
+        self.name = "PMCTreatment"
+        self.save_dir = os.path.join(save_path, self.name)
+        self._load()
+
+
+class IIYiClinicalDataReader(BaseHFDataReader):
+    def __init__(self):
+        self.hf_path = "hf://datasets/R2MED/IIYi-Clinical/corpus.jsonl"
+        self.name = "IIYiClinical"
+        self.save_dir = os.path.join(save_path, self.name)
+        self._load()
+
+
 # Driver code, only for testing
 def main():
-    medical_sciences_dr = MedicalSciencesDataReader()
-    paragraphs, pids = medical_sciences_dr.get_documents()
+    data_reader = PMCTreatmentDataReader()
+    paragraphs, pids = data_reader.get_documents()
     my_logger.info(paragraphs[0])
     my_logger.info()
     my_logger.info(pids[0])
