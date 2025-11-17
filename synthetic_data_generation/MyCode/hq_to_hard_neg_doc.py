@@ -37,10 +37,22 @@ def format_data(data: List[dict]) -> List[dict]:
     return result
 
 
+def is_already_generated(jsonl_file):
+    # Check if it's in output path
+    file_name = os.path.basename(jsonl_file)
+    supposed_save_path = os.path.join(output_path, file_name)
+    return os.path.exists(supposed_save_path)
+
+
 def hq_to_hard_neg_doc():
     jsonl_files = get_jsonl_files(data_path)
 
     for jsonl_file in jsonl_files:
+        # If jsonl file is already generated, skip
+        if is_already_generated(jsonl_file):
+            my_logger.warn(f"{jsonl_file} already generated. Skip.")
+            continue
+
         my_logger.info(jsonl_file)
 
         data = []
