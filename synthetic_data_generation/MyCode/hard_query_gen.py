@@ -4,6 +4,7 @@ import random
 import argparse
 from typing import List
 from tqdm import tqdm
+from datetime import datetime
 
 from bm25_miner import BM25_Miner
 from data_reader import MedicalSciencesDataReader, PMCTreatmentDataReader, IIYiClinicalDataReader
@@ -112,11 +113,13 @@ def doc2query(bm25_miner, subject: str,
 
     model_id_str = model_id.split('/')[-1]
     # path to save intermediate model generated results, will check if the same document has been used before to avoid repetitive generation.
-    final_output_path = os.path.join(output_dir, f'all_docs_train_data/{prompt_id}/{model_id_str}/{subject}_{num_docs}_train_data.jsonl')
+    
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    final_output_path = os.path.join(output_dir, f'all_docs_train_data/{prompt_id}/{model_id_str}/{subject}_{num_docs}_train_data_{timestamp}.jsonl')
     final_output_path = os.path.expanduser(final_output_path)
     os.makedirs(os.path.dirname(final_output_path), exist_ok=True)
 
-    output_path = os.path.join(output_dir, f'all_docs/{prompt_id}/{model_id_str}/{subject}_train_data.jsonl')
+    output_path = os.path.join(output_dir, f'all_docs/{prompt_id}/{model_id_str}/{subject}_train_data_{timestamp}.jsonl')
     output_path = os.path.expanduser(output_path)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     hashed_data = hash_existed_documents(output_path)
