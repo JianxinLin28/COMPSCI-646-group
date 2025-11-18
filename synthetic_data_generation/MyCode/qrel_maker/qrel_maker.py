@@ -7,7 +7,13 @@
 
 # 3. Find pos doc id for each pos doc from db
 
-# 4. The final dict is key=hard passage id, value=pos doc id
+# 4. Make hp_id_to_hp
+
+# 5. Make pos_id_to_hp_ids 
+
+# 6. Load qrel from database
+
+# 7. Make new qrel entries and save as file
 
 
 import os
@@ -28,14 +34,16 @@ my_logger= my_logger.MyLogger()
 
 
 # ============================================
-hp_jsonl = "../outputs/negative_passages/IIYiClinical_200_train_data_2025-11-17_16-41-06.jsonl"
+hp_jsonl = "../outputs/negative_passages/IIYiClinical_50_train_data_2025-11-17_18-42-03.jsonl"
 data_path = "../data/IIYiClinical"
+qrel_hf_path = "hf://datasets/R2MED/IIYi-Clinical/qrels.jsonl"
 output_path = "output"
-if not os.path.exists(output_path):
-    os.makedirs(output_path)
+os.makedirs(output_path, exist_ok=True)
+output_data_path = os.path.join(output_path, "data")
 
 hp_id_to_hp_path = os.path.join(output_path, os.path.basename(hp_jsonl).replace(".jsonl", "_hp_id_to_hp.jsonl"))
 pos_id_to_hp_ids_path = os.path.join(output_path, os.path.basename(hp_jsonl).replace(".jsonl", "_pos_id_to_hp_ids.jsonl"))
+qrel_extent_path = os.path.join(output_path, os.path.basename(hp_jsonl).replace(".jsonl", "_qrel_extent.jsonl"))
 # ============================================
 
 
@@ -92,7 +100,7 @@ def get_hp_id_to_pos_doc_id():
     return result
 
 
-def main():
+def get_pos_doc_id_to_hp_ids():
     hp_id_to_pos_doc_id = get_hp_id_to_pos_doc_id()
     
     # Save to output, key=pos doc id, value=[hp_id]
@@ -113,6 +121,47 @@ def main():
     # Save pos id to hp ids
     with open(pos_id_to_hp_ids_path, "w", encoding="utf-8") as f:
         for obj in output2:
+            f.write(json.dumps(obj) + "\n")
+    return pos_doc_id_to_hp_ids
+
+
+def load_qrel():
+    hf_data_reader = BaseHFDataReader()
+    hf_data_reader.hf_path = qrel_hf_path
+    hf_data_reader.name = os.path.basename(data_path)
+    hf_data_reader.save_dir = output_data_path
+    hf_data_reader._load()
+    
+    q_ids = hf_data_reader.data_reader.column_to_list("train", "q_id")
+    p_ids = hf_data_reader.data_reader.column_to_list("train", "p_id")
+    return [(q_id, p_id) for q_id, p_id in zip(q_ids, p_ids)]
+
+
+def get_qrel_extent(pos_doc_id_to_hp_ids, qrel):
+    result = []
+
+    for q_id, p_id in qrel:
+        if p_id not in pos_doc_id_to_hp_ids:
+            continue
+
+        hp_ids = pos_doc_id_to_hp_ids[p_id]
+        for hp_id in hp_ids:
+            result.append({
+                "q_id": q_id,
+                "p_id": hp_id,
+                "score": 1
+            })
+    return result
+
+
+def main():
+    pos_doc_id_to_hp_ids = get_pos_doc_id_to_hp_ids()
+    qrel = load_qrel()
+    qrel_extent = get_qrel_extent(pos_doc_id_to_hp_ids, qrel)
+
+    # Save qrel_extent
+    with open(qrel_extent_path, "w", encoding="utf-8") as f:
+        for obj in qrel_extent:
             f.write(json.dumps(obj) + "\n")
 
 
