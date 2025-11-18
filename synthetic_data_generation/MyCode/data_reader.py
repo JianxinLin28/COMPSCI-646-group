@@ -13,6 +13,7 @@ my_logger= my_logger.MyLogger()
 
 # ================================================
 save_path = "./data"
+save_path_qrel = "./data_qrel"
 # ================================================
 
 
@@ -93,6 +94,37 @@ class IIYiClinicalDataReader(BaseHFDataReader):
         self.hf_path = "hf://datasets/R2MED/IIYi-Clinical/corpus.jsonl"
         self.name = "IIYiClinical"
         self.save_dir = os.path.join(save_path, self.name)
+        self._load()
+
+
+class BaseHFDataQrelReader(BaseHFDataReader):
+    def get_qid_to_pid(self) -> Tuple[List[str], List[str]]:
+        qids = self.data_reader.column_to_list("train", "q_id")
+        pids = self.data_reader.column_to_list("train", "p_id")
+        return qids, pids
+
+
+class MedicalSciencesQrelDataReader(BaseHFDataQrelReader):
+    def __init__(self):
+        self.hf_path = "hf://datasets/R2MED/Medical-Sciences/qrels.jsonl"
+        self.name = "MedicalSciences"
+        self.save_dir = os.path.join(save_path_qrel, self.name)
+        self._load()
+
+
+class PMCTreatmentQrelDataReader(BaseHFDataQrelReader):
+    def __init__(self):
+        self.hf_path = "hf://datasets/R2MED/PMC-Treatment/qrels.jsonl"
+        self.name = "PMCTreatment"
+        self.save_dir = os.path.join(save_path_qrel, self.name)
+        self._load()
+
+
+class IIYiClinicalQrelDataReader(BaseHFDataQrelReader):
+    def __init__(self):
+        self.hf_path = "hf://datasets/R2MED/IIYi-Clinical/qrels.jsonl"
+        self.name = "IIYiClinical"
+        self.save_dir = os.path.join(save_path_qrel, self.name)
         self._load()
 
 

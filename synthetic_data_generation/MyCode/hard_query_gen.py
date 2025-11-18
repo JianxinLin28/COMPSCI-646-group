@@ -7,7 +7,8 @@ from tqdm import tqdm
 from datetime import datetime
 
 from bm25_miner import BM25_Miner
-from data_reader import MedicalSciencesDataReader, PMCTreatmentDataReader, IIYiClinicalDataReader
+from data_reader import (MedicalSciencesDataReader, PMCTreatmentDataReader, IIYiClinicalDataReader, 
+                            MedicalSciencesQrelDataReader, PMCTreatmentQrelDataReader, IIYiClinicalQrelDataReader)
 
 import sys
 import os
@@ -88,13 +89,14 @@ def format_example(query, document, queries_per_doc):
     return items
 
 
-def doc2query(bm25_miner, subject: str,
+def doc2query(bm25_miner, subject: str, pids,
                 model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", 
                 num_docs=100, queries_per_doc=1, filter_name=None, 
                 output_dir='synthetic_data', prompt_id='hq_gen', 
                 num_prompts=1, temperature=0, top_p=0):
 
     prompt = prompt_registry[prompt_id]
+
     documents, doc_ids = bm25_miner.documents, bm25_miner.doc_ids
     doc_dicts = [{'doc_id': doc_id, 'doc': doc} for doc_id, doc in zip(doc_ids, documents)]
 
@@ -105,8 +107,8 @@ def doc2query(bm25_miner, subject: str,
     os.makedirs(filter_cache_dir, exist_ok=True)
     my_logger.info(f"Filtering documents based on {filter_name}...")
 
-    doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
-    
+    doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, pids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
+
     num_filtered_docs = len(doc_dicts)
     my_logger.info(f"Total number of documents after filtering: {total_num_docs}")
     my_logger.info(f"Number of filtered documents with oversampling: {num_filtered_docs}")
@@ -119,7 +121,7 @@ def doc2query(bm25_miner, subject: str,
     final_output_path = os.path.expanduser(final_output_path)
     os.makedirs(os.path.dirname(final_output_path), exist_ok=True)
 
-    output_path = os.path.join(output_dir, f'all_docs/{prompt_id}/{model_id_str}/{subject}_train_data_{timestamp}.jsonl')
+    output_path = os.path.join(output_dir, f'all_docs/{prompt_id}/{model_id_str}/{subject}_{num_docs}_train_data_{timestamp}.jsonl')
     output_path = os.path.expanduser(output_path)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     hashed_data = hash_existed_documents(output_path)
@@ -213,23 +215,35 @@ if __name__ == '__main__':
     documents: List[str] = None
     doc_ids: List[str] = None
 
+    qids: List[str] = None
+    pids: List[str] = None
+
     match args.dataset:
         case "MedicalSciences":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = MedicalSciencesDataReader().get_documents()
+            qids, pids = MedicalSciencesQrelDataReader().get_qid_to_pid()
         case "PMCTreatment":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = PMCTreatmentDataReader().get_documents()
+            qids, pids = PMCTreatmentQrelDataReader().get_qid_to_pid()
         case "IIYiClinical":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = IIYiClinicalDataReader().get_documents()
+            qids, pids = IIYiClinicalQrelDataReader().get_qid_to_pid()
         case _:
             my_logger.error("Invalid dataset. Please see README for valid datasets.")
+
+    # bm25_miner = BM25_Miner(documents, doc_ids)
+    # passages = []
+    # for document, doc_id in zip(documents, doc_ids):
+    #     if doc_id in pids:
+    #         passages.append(doc_id)
 
     bm25_miner = BM25_Miner(documents, doc_ids)
 
     model_id = args.model_id
-    doc2query(bm25_miner, subject=args.dataset, 
+    doc2query(bm25_miner, subject=args.dataset, pids=pids,
                 model_id=model_id, num_docs=args.num_docs, filter_name=args.filter, 
                 queries_per_doc=args.queries_per_doc, output_dir=args.output_dir, 
                 prompt_id=args.prompt_id, temperature=args.temperature, top_p=args.top_p)

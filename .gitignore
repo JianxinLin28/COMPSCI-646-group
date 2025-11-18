@@ -214,3 +214,5 @@ synthetic_data_generation/data
 */MyCode/cache
 */MyCode/data
 */MyCode/outputs
+*/MyCode/qrel_maker/inspect
+*/MyCode/qrel_maker/output

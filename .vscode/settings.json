@@ -1,6 +1,9 @@
 {
     "cSpell.words": [
         "huggingface",
-        "pids"
+        "pids",
+        "qids",
+        "qrel",
+        "qrels"
     ]
 }

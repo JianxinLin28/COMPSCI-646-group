@@ -144,11 +144,27 @@ def get_docs(task, long_context=False, cache_dir='cache'):
 
 
 # filter the documents based on the filter_name
-def document_filter(documents, doc_ids, filter_name=None, threshold=1, return_scores=False, num_docs=None, num_sample_pool=None, cache_dir=None, debug=False):
+def document_filter(documents, doc_ids, pids, filter_name=None, threshold=1, return_scores=False, num_docs=None, num_sample_pool=None, cache_dir=None, debug=False):
     my_logger.info(f"Deduplicating {len(documents)} documents...")
     documents, indices = deduplicate_docs(documents)
+
     my_logger.info(f"Number of unique documents: {len(documents)}")
     doc_ids = [doc_ids[i] for i in indices]
+
+    # =========================================================
+    # ! We want to guarantee the paragraph is associated with qrel
+    valid_indices = []
+    for i in range(len(doc_ids)):
+        if doc_ids[i] in pids:
+            valid_indices.append(i)
+
+    doc_ids = [doc_id for doc_id in doc_ids if doc_id in pids]
+    new_documents = []
+    for idx in valid_indices:
+        new_documents.append(documents[idx])
+    documents = new_documents
+    # =========================================================
+
     if len(documents) > 0 and isinstance(documents[0], dict):
         # check if the documents are in the form of dictionaries
         passages = [documents[i]['doc'] for i in range(len(documents))]
