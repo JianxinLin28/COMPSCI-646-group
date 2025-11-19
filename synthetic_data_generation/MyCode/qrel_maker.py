@@ -147,7 +147,7 @@ def main(hp_jsonl, documents, doc_ids, qids, pids):
     pos_id_to_hp_ids_path = os.path.join(output_path, os.path.basename(hp_jsonl).replace(".jsonl", "_pos_id_to_hp_ids.jsonl"))
     qrel_extent_path = os.path.join(output_path, os.path.basename(hp_jsonl).replace(".jsonl", "_qrel_extent.jsonl"))
 
-    pos_doc_id_to_hp_ids = get_pos_doc_id_to_hp_ids(documents, doc_ids, hp_id_to_hp_path, pos_id_to_hp_ids_path, hp_jsonl)
+    pos_doc_id_to_hp_ids = get_pos_doc_id_to_hp_ids(documents, doc_ids, pos_id_to_hp_ids_path, hp_id_to_hp_path, hp_jsonl)
     qrel = load_qrel(qids, pids)
     qrel_extent = get_qrel_extent(pos_doc_id_to_hp_ids, qrel)
 
