@@ -2,6 +2,7 @@ import os
 import json
 import random
 import argparse
+from pathlib import Path
 from typing import List
 from tqdm import tqdm
 from datetime import datetime
@@ -89,6 +90,15 @@ def format_example(query, document, queries_per_doc):
     return items
 
 
+def shuffle_paired_lists(a, b):
+    pairs = list(zip(a, b))
+    random.shuffle(pairs)
+
+    a_shuffled, b_shuffled = zip(*pairs)
+
+    return list(a_shuffled), list(b_shuffled)
+
+
 def doc2query(bm25_miner, subject: str, pids,
                 model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", 
                 num_docs=100, queries_per_doc=1, filter_name=None, 
@@ -108,8 +118,10 @@ def doc2query(bm25_miner, subject: str, pids,
     my_logger.info(f"Filtering documents based on {filter_name}...")
 
     doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, pids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
+    doc_dicts, doc_ids = shuffle_paired_lists(doc_dicts, doc_ids)
 
     num_filtered_docs = len(doc_dicts)
+
     my_logger.info(f"Total number of documents after filtering: {total_num_docs}")
     my_logger.info(f"Number of filtered documents with oversampling: {num_filtered_docs}")
 
@@ -189,7 +201,33 @@ def doc2query(bm25_miner, subject: str, pids,
     write_jsonl(final_training_data, final_output_path)
 
 
-if __name__ == '__main__':
+def get_generated_qids(dataset: str) -> set[str]:
+    # Read from past generated files
+    # Make a list of qids that has been generated
+    result = set()
+    folder = Path("outputs/qrel")
+    files = [p for p in folder.iterdir() if p.name.endswith("qrel_extent.jsonl") and p.name.startswith(dataset)]
+
+    for file in files:
+        with open(file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    content = json.loads(line)
+                    result.add(content["q_id"])
+    return result
+
+
+def get_pids(qid_to_pids: dict[str, List[str]], dataset: str) -> List[str]:
+    result = []
+    generated_qids = get_generated_qids(dataset)
+    for qid, pids in qid_to_pids.items():
+        if qid not in generated_qids:  # Remove this line if you don't want to enforce uniqueness rule
+            result.extend(pids)
+
+    return result
+
+
+def main():
     parser = argparse.ArgumentParser()
     # parser.add_argument('--mode', type=str, default=None, help='mode')
     parser.add_argument('--dataset', type=str, default='MedicalSciences', help='the dataset, see README')
@@ -212,25 +250,25 @@ if __name__ == '__main__':
     os.makedirs(args.cache_dir, exist_ok=True)
     # print(args)
 
+
     documents: List[str] = None
     doc_ids: List[str] = None
 
-    qids: List[str] = None
-    pids: List[str] = None
+    qid_to_pids: dict[str, List[str]] = None
 
     match args.dataset:
         case "MedicalSciences":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = MedicalSciencesDataReader().get_documents()
-            qids, pids = MedicalSciencesQrelDataReader().get_qid_to_pid()
+            qid_to_pids = MedicalSciencesQrelDataReader().get_qid_to_pids()
         case "PMCTreatment":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = PMCTreatmentDataReader().get_documents()
-            qids, pids = PMCTreatmentQrelDataReader().get_qid_to_pid()
+            qid_to_pids = PMCTreatmentQrelDataReader().get_qid_to_pids()
         case "IIYiClinical":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = IIYiClinicalDataReader().get_documents()
-            qids, pids = IIYiClinicalQrelDataReader().get_qid_to_pid()
+            qid_to_pids = IIYiClinicalQrelDataReader().get_qid_to_pids()
         case _:
             my_logger.error("Invalid dataset. Please see README for valid datasets.")
 
@@ -242,8 +280,14 @@ if __name__ == '__main__':
 
     bm25_miner = BM25_Miner(documents, doc_ids)
 
+    pids = get_pids(qid_to_pids, args.dataset)
+
     model_id = args.model_id
     doc2query(bm25_miner, subject=args.dataset, pids=pids,
                 model_id=model_id, num_docs=args.num_docs, filter_name=args.filter, 
                 queries_per_doc=args.queries_per_doc, output_dir=args.output_dir, 
                 prompt_id=args.prompt_id, temperature=args.temperature, top_p=args.top_p)
+
+
+if __name__ == '__main__':
+    main()

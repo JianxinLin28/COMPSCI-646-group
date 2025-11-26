@@ -172,15 +172,15 @@ if __name__ == "__main__":
         case "MedicalSciences":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = MedicalSciencesDataReader().get_documents()
-            qids, pids = MedicalSciencesQrelDataReader().get_qid_to_pid()
+            qids, pids = MedicalSciencesQrelDataReader().get_qid_to_pids()
         case "PMCTreatment":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = PMCTreatmentDataReader().get_documents()
-            qids, pids = PMCTreatmentQrelDataReader().get_qid_to_pid()
+            qids, pids = PMCTreatmentQrelDataReader().get_qid_to_pids()
         case "IIYiClinical":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = IIYiClinicalDataReader().get_documents()
-            qids, pids = IIYiClinicalQrelDataReader().get_qid_to_pid()
+            qids, pids = IIYiClinicalQrelDataReader().get_qid_to_pids()
         case _:
             my_logger.error("Invalid dataset. Please see README for valid datasets.")
     
