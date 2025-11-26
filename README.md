@@ -143,6 +143,14 @@ First, cd to `MyCode`. Run the following command multiple times. Check `MyCode/o
 python -m hard_query_gen --dataset MedicalSciences --model_id gpt-4o --queries_per_doc 1 --num_docs 50 --prompt_id "hq_gen"
 ```
 
+For the stop point, you can go to the next step if you see the record has this number of entries.
+
+| dataset | number of entries |
+| --- | --- |
+| MedicalSciences | 88 |
+| PMCTreatment | 150 |
+| IIYiClinical | 129 |
+
 Second, run
 ```
 python hq_to_hard_neg_doc.py

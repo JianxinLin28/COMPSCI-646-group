@@ -118,7 +118,7 @@ def doc2query(bm25_miner, subject: str, pids, qid_to_pids,
     my_logger.info(f"Filtering documents based on {filter_name}...")
 
     doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, pids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
-    doc_dicts, doc_ids = shuffle_paired_lists(doc_dicts, doc_ids)
+    # doc_dicts, doc_ids = shuffle_paired_lists(doc_dicts, doc_ids)
 
     num_filtered_docs = len(doc_dicts)
 
@@ -158,6 +158,7 @@ def doc2query(bm25_miner, subject: str, pids, qid_to_pids,
     # qid: parent
     # pids: children
     forbidden_pids = []
+    generated_qids = get_generated_qids(subject)
 
     with open(output_path, 'a+', buffering=1) as fout:
         for doc_dict in tqdm(doc_dicts):
@@ -173,6 +174,8 @@ def doc2query(bm25_miner, subject: str, pids, qid_to_pids,
                 pids = qid_to_pids[pair_qid]
                 forbidden_pids.extend(pids)
             
+            pairs_used_pid = [pair for pair in pairs_used_pid if pair["q_id"] not in generated_qids]
+
             add_to_record(subject, pairs_used_pid)
 
             formatted_query = format_query_doc(document)
