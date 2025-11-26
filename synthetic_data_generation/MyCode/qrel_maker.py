@@ -17,18 +17,18 @@
 
 
 import os
+from pathlib import Path
 import sys
 import json
 import argparse
-from typing import List
+from typing import List, Tuple
 import uuid
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../MyUtil/')))
 import my_logger # type: ignore
 
-from data_reader import (MedicalSciencesDataReader, PMCTreatmentDataReader, IIYiClinicalDataReader,
-                        MedicalSciencesQrelDataReader, PMCTreatmentQrelDataReader, IIYiClinicalQrelDataReader)
+from data_reader import MedicalSciencesDataReader, PMCTreatmentDataReader, IIYiClinicalDataReader
 
 
 my_logger= my_logger.MyLogger()
@@ -157,6 +157,38 @@ def main(hp_jsonl, documents, doc_ids, qids, pids):
             f.write(json.dumps(obj) + "\n")
 
 
+def get_generation_record(dataset: str) -> List[dict[str, str]]:
+    result = []
+    folder = Path("outputs/generation_record")
+    files = [p for p in folder.iterdir() if p.name.startswith(dataset)]
+
+    for file in files:
+        with open(file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    content = json.loads(line)
+                    result.append(content)
+    return result
+
+
+def get_qids_pids(dataset: str) -> Tuple[List[str], List[str]]:
+    qids = []
+    pids = []
+    generation_record = get_generation_record(dataset)
+    for pair in generation_record:
+        qids.append(pair["q_id"])
+        pids.append(pair["p_id"])
+    return qids, pids
+
+
+def get_pids(qid_to_pids: dict[str, List[str]]) -> List[str]:
+    result = []
+    for qid, pids in qid_to_pids.items():
+        result.extend(pids)
+
+    return result
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='MedicalSciences', help='the dataset, see README')
@@ -165,25 +197,22 @@ if __name__ == "__main__":
     documents: List[str] = None
     doc_ids: List[str] = None
 
-    qids: List[str] = None
-    pids: List[str] = None
-
     match args.dataset:
         case "MedicalSciences":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = MedicalSciencesDataReader().get_documents()
-            qids, pids = MedicalSciencesQrelDataReader().get_qid_to_pids()
         case "PMCTreatment":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = PMCTreatmentDataReader().get_documents()
-            qids, pids = PMCTreatmentQrelDataReader().get_qid_to_pids()
         case "IIYiClinical":
             my_logger.info(f"Loading dataset: {args.dataset}")
             documents, doc_ids = IIYiClinicalDataReader().get_documents()
-            qids, pids = IIYiClinicalQrelDataReader().get_qid_to_pids()
         case _:
             my_logger.error("Invalid dataset. Please see README for valid datasets.")
     
+
+    qids, pids = get_qids_pids(args.dataset)
+
     jsonl_files = get_jsonl_files(hp_jsonl_folder)
     for jsonl_file in jsonl_files:
         main(jsonl_file, documents, doc_ids, qids, pids)

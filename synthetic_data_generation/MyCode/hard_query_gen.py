@@ -48,7 +48,7 @@ def check_sample_existence(document, hashed_data, prompt=None):
         return False, None
 
 
-def format_example(query, document, queries_per_doc):
+def format_example(query, document, queries_per_doc, bm25_miner):
     decoder = json.JSONDecoder()
     try:
         json_data, _ = decoder.raw_decode(query[query.find('{'):])
@@ -99,7 +99,7 @@ def shuffle_paired_lists(a, b):
     return list(a_shuffled), list(b_shuffled)
 
 
-def doc2query(bm25_miner, subject: str, pids,
+def doc2query(bm25_miner, subject: str, pids, qid_to_pids,
                 model_id="meta-llama/Meta-Llama-3.1-70B-Instruct", 
                 num_docs=100, queries_per_doc=1, filter_name=None, 
                 output_dir='synthetic_data', prompt_id='hq_gen', 
@@ -153,9 +153,28 @@ def doc2query(bm25_miner, subject: str, pids,
     my_logger.debug("End of system prompts.")
     my_logger.info()
 
+    # Avoid generate using pid if any of its sibling has generated
+    # Analogy
+    # qid: parent
+    # pids: children
+    forbidden_pids = []
+
     with open(output_path, 'a+', buffering=1) as fout:
         for doc_dict in tqdm(doc_dicts):
             document = doc_dict['doc']
+            doc_id = doc_dict['doc_id']
+
+            if doc_id in forbidden_pids:
+                continue
+
+            pairs_used_pid = get_pairs_used_pid(qid_to_pids, doc_id)
+            for pair in pairs_used_pid:
+                pair_qid = pair["q_id"]
+                pids = qid_to_pids[pair_qid]
+                forbidden_pids.extend(pids)
+            
+            add_to_record(subject, pairs_used_pid)
+
             formatted_query = format_query_doc(document)
 
             if len(system_prompts) > num_prompts:
@@ -172,10 +191,11 @@ def doc2query(bm25_miner, subject: str, pids,
                     succeed = False
                     while not succeed and num_attempt < max_num_attempt_per_doc:
                         query = model.generate(formatted_query, system_prompt=system_prompt)
+
                         my_logger.info(f"Generated query: {query}", 1)
                         my_logger.info()
                         items = {'query': query, 'document': document, 'prompt': system_prompt}
-                        items = format_example(query, document, queries_per_doc)
+                        items = format_example(query, document, queries_per_doc, bm25_miner)
                         num_attempt += 1
                         if items is not None:
                             succeed = True
@@ -201,12 +221,22 @@ def doc2query(bm25_miner, subject: str, pids,
     write_jsonl(final_training_data, final_output_path)
 
 
+def get_pairs_used_pid(qid_to_pids: dict[str, List[str]], target_pid: str) -> List[dict[str, str]]:
+    # Get {qid, pid} pairs that used the given pid
+    result = []
+    for qid, pids in qid_to_pids.items():
+        if target_pid in pids:
+            result.append({"q_id": qid, "p_id": target_pid})
+    return result
+
+
 def get_generated_qids(dataset: str) -> set[str]:
     # Read from past generated files
     # Make a list of qids that has been generated
     result = set()
-    folder = Path("outputs/qrel")
-    files = [p for p in folder.iterdir() if p.name.endswith("qrel_extent.jsonl") and p.name.startswith(dataset)]
+    os.makedirs("outputs/generation_record", exist_ok=True)
+    folder = Path("outputs/generation_record")
+    files = [p for p in folder.iterdir() if p.name.startswith(dataset)]
 
     for file in files:
         with open(file, "r", encoding="utf-8") as f:
@@ -215,6 +245,14 @@ def get_generated_qids(dataset: str) -> set[str]:
                     content = json.loads(line)
                     result.add(content["q_id"])
     return result
+
+
+def add_to_record(dataset: str, qid_to_chosen_pid: List[dict[str, str]]):
+    save_path = os.path.join("outputs/generation_record", dataset)
+    save_path += ".jsonl"
+    with open(save_path, "a", encoding="utf-8") as f:
+        for item in qid_to_chosen_pid:
+            f.write(json.dumps(item) + "\n")
 
 
 def get_pids(qid_to_pids: dict[str, List[str]], dataset: str) -> List[str]:
@@ -283,7 +321,7 @@ def main():
     pids = get_pids(qid_to_pids, args.dataset)
 
     model_id = args.model_id
-    doc2query(bm25_miner, subject=args.dataset, pids=pids,
+    doc2query(bm25_miner, subject=args.dataset, pids=pids, qid_to_pids=qid_to_pids,
                 model_id=model_id, num_docs=args.num_docs, filter_name=args.filter, 
                 queries_per_doc=args.queries_per_doc, output_dir=args.output_dir, 
                 prompt_id=args.prompt_id, temperature=args.temperature, top_p=args.top_p)
