@@ -134,3 +134,27 @@ python qrel_maker.py --dataset MedicalSciences
 | MedicalSciences |
 | PMCTreatment |
 | IIYiClinical |
+
+## 🚀Workload
+Assuming you are doing 'MedicalSciences'.
+
+First, cd to `MyCode`. Run the following command multiple times. Check `MyCode/outputs/generation_record/MedicalSciences.jsonl`. Stop after the number entries no longer increase. This ensures each query gets exactly **one** hard negative document.
+```
+python -m hard_query_gen --dataset MedicalSciences --model_id gpt-4o --queries_per_doc 1 --num_docs 50 --prompt_id "hq_gen"
+```
+
+Second, run
+```
+python hq_to_hard_neg_doc.py
+```
+
+Third, run
+```
+python qrel_maker.py --dataset MedicalSciences
+```
+
+Fourth, delete the jsonl file (`MyCode/outputs/generation_record/MedicalSciences.jsonl`) and repeat the last three steps to generate one more hard negative document for each query.
+
+So, in total, you need to do this **five** times for one database. In the end, 
+
+> For each query in the qrels, generate five hard negative documents base on randomly selected passages that are associated with the same query.
