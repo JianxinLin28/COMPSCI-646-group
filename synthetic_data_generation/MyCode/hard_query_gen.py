@@ -118,7 +118,7 @@ def doc2query(bm25_miner, subject: str, pids, qid_to_pids,
     my_logger.info(f"Filtering documents based on {filter_name}...")
 
     doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, pids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
-    # doc_dicts, doc_ids = shuffle_paired_lists(doc_dicts, doc_ids)
+    doc_dicts, doc_ids = shuffle_paired_lists(doc_dicts, doc_ids)
 
     num_filtered_docs = len(doc_dicts)
 
