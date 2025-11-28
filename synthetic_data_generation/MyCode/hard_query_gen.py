@@ -3,7 +3,7 @@ import json
 import random
 import argparse
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 from tqdm import tqdm
 from datetime import datetime
 
@@ -118,7 +118,7 @@ def doc2query(bm25_miner, subject: str, pids, qid_to_pids,
     my_logger.info(f"Filtering documents based on {filter_name}...")
 
     doc_dicts, doc_ids = document_filter(doc_dicts, doc_ids, pids, filter_name=filter_name, num_docs=num_docs, cache_dir=filter_cache_dir)
-    doc_dicts, doc_ids = shuffle_paired_lists(doc_dicts, doc_ids)
+    # doc_dicts, doc_ids = shuffle_paired_lists(doc_dicts, doc_ids)
 
     num_filtered_docs = len(doc_dicts)
 
@@ -268,6 +268,33 @@ def get_pids(qid_to_pids: dict[str, List[str]], dataset: str) -> List[str]:
     return result
 
 
+def get_generation_record(dataset: str) -> List[dict[str, str]]:
+    result = []
+    folder = Path("outputs/generation_record")
+    files = [p for p in folder.iterdir() if p.name.startswith(dataset)]
+
+    for file in files:
+        with open(file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    content = json.loads(line)
+                    result.append(content)
+    return result
+
+
+def read_fill_file() -> List[Tuple[str, int]]:
+    result = []
+    fill_file_path = "outputs/fill.txt"
+    with open(fill_file_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip()
+            line = line.replace("q_id: ", "")
+            line = line.split(", len: ")
+            result.append((line[0], int(line[1])))
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser()
     # parser.add_argument('--mode', type=str, default=None, help='mode')
@@ -323,9 +350,37 @@ def main():
 
     pids = get_pids(qid_to_pids, args.dataset)
 
+    num_docs = args.num_docs
+    fill = read_fill_file()
+    valid_num_docs = 0
+    if len(fill) != 0:
+        generation_record = get_generation_record(args.dataset)
+        new_qid_to_pids = dict()
+        new_pids = []
+        for item in fill:
+            qid = item[0]
+
+            should_skip = False
+            for pair in generation_record:
+                if pair["q_id"] == qid:
+                    should_skip = True
+            if should_skip: continue
+
+            new_qid_to_pids[qid] = qid_to_pids[qid]
+            valid_num_docs += 1
+
+            pids_for_qid = qid_to_pids[qid]
+            new_pids.extend(pids_for_qid)
+        num_docs = valid_num_docs
+        for pid in new_pids:
+            if pid not in pids:
+                new_pids.remove(pid)
+        pids = new_pids
+        qid_to_pids = new_qid_to_pids
+
     model_id = args.model_id
     doc2query(bm25_miner, subject=args.dataset, pids=pids, qid_to_pids=qid_to_pids,
-                model_id=model_id, num_docs=args.num_docs, filter_name=args.filter, 
+                model_id=model_id, num_docs=num_docs, filter_name=args.filter, 
                 queries_per_doc=args.queries_per_doc, output_dir=args.output_dir, 
                 prompt_id=args.prompt_id, temperature=args.temperature, top_p=args.top_p)
 
