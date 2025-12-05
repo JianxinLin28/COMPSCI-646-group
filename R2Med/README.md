@@ -1,4 +1,5 @@
 <h1 align="center">R2MED: A Benchmark for Reasoning-Driven Medical Retrieval</h1>
+
 This is the modified version of [https://github.com/R2MED/R2MED](https://github.com/R2MED/R2MED) for hard negative evaluation.
 
 ## ⚙️  Installation
