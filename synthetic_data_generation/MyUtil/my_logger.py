@@ -13,8 +13,7 @@ class MyLogger:
             print()
 
     def info(self, message: str="", indent: int=0):
-        # self._log("INFO", message, indent)
-        pass
+        self._log("INFO", message, indent)
     
     def warn(self, message: str="", indent: int=0):
         self._log("WARN", message, indent)
