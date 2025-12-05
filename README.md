@@ -1,6 +1,9 @@
 # COMPSCI-646-group
 A Study of Hard Negative Samples on Reasoning-aware Retrieval Models
 
+## 🧑‍🏫 For graders
+To check the status for our codebase, visit [CODEBASE.md](./CODEBASE.md)
+
 ## 📕 Setup 
 ⚠️ I strongly recommend you to install everything in a dedicated python environment. (>= python 3.10)
 
